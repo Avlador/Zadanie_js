@@ -1,30 +1,12 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css'; 
+import { getEmojis, type IEmojiItem } from './api/emojiApi';
 
 interface EmojiCardProps {
   symbol: string;
   title: string;
   keywords: string;
 }
-
-export function Header() {
-  return (
-    <header className="header-section">
-      <h1>Emoji Finder</h1>
-      <h2>Find emoji by keywords</h2>
-    </header>
-  );
-}
-
-
-export function SearchInput() {
-  return (
-    <div className="search-container">
-      <input className="search-input" type="text" placeholder="Placeholder" />
-    </div>
-  );
-}
-
 
 export function EmojiCard({ symbol, title, keywords }: EmojiCardProps) {
   return (
@@ -36,53 +18,74 @@ export function EmojiCard({ symbol, title, keywords }: EmojiCardProps) {
   );
 }
 
-export function CardsContainer() {
-
-  const emojisData = [
-    {
-      id: 1,
-      symbol: "💯",
-      title: "100",
-      keywords: "Hundred, points, symbol, wow, win, perfect, parties"
-    },
-    {
-      id: 2,
-      symbol: "🔢",
-      title: "1234",
-      keywords: "input symbol for numbers symbol"
-    },
-    {
-      id: 3,
-      symbol: "🔢",
-      title: "1234",
-      keywords: "input symbol for numbers symbol"
-    }
-  ];
-
-  return (
-    <main className="main-content">
-      <div className="cards-container">
-        {emojisData.map((emoji) => (
-          <EmojiCard 
-            key={emoji.id}
-            symbol={emoji.symbol} 
-            title={emoji.title} 
-            keywords={emoji.keywords} 
-          />
-        ))}
-      </div>
-    </main>
-  );
-}
-
-
-
 export default function App() {
+  const [emojis, setEmojis] = useState<IEmojiItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getEmojis(searchTerm);
+      setEmojis(data);
+    } catch (err) {
+      setError('Не удалось загрузить данные. Проверьте, запущен ли сервер.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(); 
+  }, [searchTerm]);
+
   return (
     <div className="app-wrapper">
-      <Header />
-      <SearchInput />
-      <CardsContainer />
+      <header className="header-section">
+        <h1>Emoji Finder</h1>
+        <h2>Find emoji by keywords</h2>
+      </header>
+
+      <div className="search-container">
+        <input 
+          className="search-input" 
+          type="text" 
+          placeholder="Введите название или ключевое слово..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)} 
+        />
+        {searchTerm && (
+          <button 
+            className="clear-button" 
+            onClick={() => setSearchTerm('')}
+          >
+            Очистить поиск
+          </button>
+        )}
+      </div>
+
+      <main className="main-content">
+        {loading && <p>Загрузка...</p>}
+        {error && <p className="error-message">{error}</p>}
+        
+        <div className="cards-container">
+          {/* Добавлена проверка на пустой массив */}
+          {!loading && !error && emojis.length === 0 ? (
+            <p>Эмодзи не найдены</p>
+          ) : (
+            emojis.map((emoji) => (
+              <EmojiCard 
+                key={emoji.title} 
+                symbol={emoji.emoji} 
+                title={emoji.title} 
+                keywords={emoji.keywords} 
+              />
+            ))
+          )}
+        </div>
+      </main>
     </div>
   );
 }
